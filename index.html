@@ -105,6 +105,28 @@ h2{font-size:22px;line-height:1.55;margin:0 0 6px;font-weight:700}
 .big .n{font-size:44px;font-weight:900;color:var(--warm);line-height:1}
 .big .d{font-size:13px;font-weight:700;line-height:1.6}
 .thanks{text-align:center;font-size:13px;color:var(--sub);margin-top:6px;line-height:1.8}
+.tabcap{font-size:12px;font-weight:700;color:var(--sub);margin:4px 0 6px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:4px -16px 14px;padding:2px 16px 6px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:99px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.tab.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.tab:disabled{opacity:.4}
+.pie{display:flex;align-items:center;gap:16px}
+.pie .plg{flex:1;display:grid;gap:7px;min-width:0}
+.plg div{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;line-height:1.35}
+.plg span{flex:1}
+.plg b{font-family:"Lato",sans-serif;font-size:14px;color:var(--blue-d)}
+.plg i,.legend i{width:12px;height:12px;border-radius:4px;flex:none}
+.dn{flex:none;display:block}
+.dn circle{transition:stroke-dasharray 1s cubic-bezier(.2,.9,.3,1)}
+.dn1{font-family:"Lato",sans-serif;font-weight:900;font-size:8px;fill:var(--ink)}
+.dn2{font-size:4px;font-weight:700;fill:var(--sub)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 10px;margin-bottom:6px}
+.cell{text-align:center}
+.cell .dn{margin:0 auto 6px}
+.cell b{display:block;font-size:12.5px;line-height:1.4}
+.cell small{font-size:11px;color:var(--sub);font-weight:700}
+@media (max-width:360px){.pie{flex-direction:column}}
 .confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9}
 .confetti i{position:absolute;top:-20px;width:10px;height:14px;border-radius:3px;animation:fall linear forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.9}}
@@ -270,42 +292,68 @@ function submit(){
   else setTimeout(function(){ok(window.__MOCK__||{n:0,households:0,used:{},none:0,st:{}})},700);
 }
 function pct(a,b){return b?Math.round(a/b*100):0}
+var BANDS=[["all","全体"],["a0","0〜2歳"],["a3","3〜5歳"],["a6","6〜8歳"],["a9","9歳以上"]];
+function donut(parts,size,center,sub){
+  var r=15.9155,tot=0,off=0,s='';parts.forEach(function(p){tot+=p.v});
+  s+='<svg viewBox="0 0 42 42" width="'+size+'" height="'+size+'" class="dn"><circle cx="21" cy="21" r="'+r+'" fill="none" stroke="#EAF8FD" stroke-width="6"/>';
+  parts.forEach(function(p){if(!p.v)return;var d=p.v/tot*100;
+    s+='<circle cx="21" cy="21" r="'+r+'" fill="none" stroke="'+p.c+'" stroke-width="6" stroke-dasharray="0 100" data-d="'+d.toFixed(2)+'" stroke-dashoffset="'+(25-off).toFixed(2)+'"/>';off+=d;});
+  s+='<text x="21" y="'+(sub?20.5:22.8)+'" text-anchor="middle" class="dn1">'+center+'</text>'+(sub?'<text x="21" y="26.5" text-anchor="middle" class="dn2">'+sub+'</text>':'')+'</svg>';
+  return s;
+}
+function animate(){
+  requestAnimationFrame(function(){setTimeout(function(){
+    stage.querySelectorAll('[data-w]').forEach(function(e){e.style.width=e.getAttribute('data-w')+'%'});
+    stage.querySelectorAll('[data-d]').forEach(function(e){var d=e.getAttribute('data-d');e.setAttribute('stroke-dasharray',d+' '+(100-d))});
+  },80)});
+}
 function showResult(R){
-  S.cur={name:'result'};progress();
-  var mine={};S.kids.forEach(function(k){k.used.forEach(function(u){mine[u]=1})});
+  S.cur={name:'result'};S.R=R;progress();
   var h='<div class="screen res"><div style="text-align:center"><span class="hero">'+ic('check')+'</span></div><h1>ご回答ありがとう<br>ございました！</h1><span class="rule"></span>'+
   '<p class="lead" style="text-align:center;margin-bottom:12px">いま集まっている、みんなの結果です</p>'+
   '<div class="total"><div><b>'+R.households+'</b><span>ご家庭</span></div><div><b>'+R.n+'</b><span>お子さま</span></div></div>';
-  // used ranking
+  // ages
+  if(R.ages){var ac=["#C8E9FD","#9FD3F2","#4FA8DC","#3388BC","#F6D98E","#E9A15B"],ap=[],bi=0;
+    BANDS.slice(1).forEach(function(b,i){var n=R.bands&&R.bands[b[0]]?R.bands[b[0]].n:0;ap.push({v:n,c:ac[i+1],n:b[1]})});
+    h+='<div class="card"><h3>お子さまの年齢</h3><p class="s">回答したお子さま'+R.n+'人</p><div class="pie">'+donut(ap,128,R.n,'人')+'<div class="plg">'+
+      ap.map(function(p){return'<div><i style="background:'+p.c+'"></i><span>'+p.n+'</span><b>'+pct(p.v,R.n)+'%</b></div>'}).join('')+'</div></div></div>';}
+  h+='<p class="tabcap">年齢で切りかえて見られます</p><div class="tabs" role="tablist">'+BANDS.map(function(b){var dis=b[0]!=="all"&&!(R.bands&&R.bands[b[0]]&&R.bands[b[0]].n);
+    return'<button class="tab'+(b[0]==="all"?' on':'')+'" data-band="'+b[0]+'"'+(dis?' disabled':'')+'>'+b[1]+'</button>'}).join('')+'</div>'+
+    '<div id="bandbody">'+bandBody(R)+'</div>';
+  h+='<p class="thanks">ご協力ありがとうございました<br>このページは閉じて大丈夫です</p></div>';
+  stage.innerHTML=h;window.scrollTo(0,0);
+  stage.querySelectorAll('[data-band]').forEach(function(b){b.onclick=function(){
+    stage.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});b.classList.add('on');
+    var k=b.getAttribute('data-band'),D=k==="all"?S.R:S.R.bands[k];
+    document.getElementById('bandbody').innerHTML=bandBody(D);animate();
+  }});
+  animate();confetti();
+}
+function bandBody(R){
+  var mine={};S.kids.forEach(function(k){k.used.forEach(function(u){mine[u]=1})});
+  if(!R||!R.n)return'<div class="card"><p class="s" style="margin:0">この年齢の回答はまだありません</p></div>';
   var rows=CATS.map(function(c){return{c:c,v:R.used[c.k]||0}}).sort(function(a,b){return b.v-a.v});
-  h+='<div class="card"><h3>入会前に使っていたサービス</h3><p class="s">お子さま'+R.n+'人のうち、使っていた割合（複数回答）</p>';
+  var h='<div class="card"><h3>入会前に使っていたサービス</h3><p class="s">お子さま'+R.n+'人のうち、使っていた割合（いくつでも選べるので合計は100%になりません）</p>';
   rows.forEach(function(r){var p=pct(r.v,R.n);
     h+='<div class="row"><div class="lab"><span>'+r.c.n+(mine[r.c.k]?'<em>あなたも</em>':'')+'</span><span class="pc">'+p+'%</span></div><div class="track"><div class="fill" data-w="'+p+'"></div></div></div>';});
   var np=pct(R.none,R.n);
-  h+='<div class="row"><div class="lab"><span>🌱 どれも使っていなかった'+(mine.none?'<em>あなたも</em>':'')+'</span><span class="pc">'+np+'%</span></div><div class="track"><div class="fill alt" data-w="'+np+'" ></div></div></div></div>';
-  // overall switch
-  var tot=0,quit=0,keep=0;Object.keys(R.st).forEach(function(k){var s=R.st[k];STS.forEach(function(x){var v=s[x.k]||0;tot+=v;if(x.k==="atjoin"||x.k==="later")quit+=v;if(x.k==="both"||x.k==="less")keep+=v;})});
-  var act2=quit+keep;
-  if(act2){h+='<div class="card"><h3>LILI入会後、どうなった？</h3><p class="s">入会前に使っていたサービスのうち（すでにやめていたものを除く）</p>'+
-   '<div class="big" style="margin-bottom:12px"><div class="n" data-count="'+pct(quit,act2)+'">0%</div><div class="d">はLILI入会後に<br><b>やめた</b></div></div>'+
-   '<div class="big"><div class="n" style="color:var(--blue-d)" data-count="'+pct(keep,act2)+'">0%</div><div class="d">は今も<b>LILIと併用</b>中</div></div></div>';}
-  // per service
-  h+='<div class="card"><h3>サービスごとの「その後」</h3><p class="s">そのサービスを使っていた人の内訳</p>';
-  var any=false;
-  rows.forEach(function(r){var s=R.st[r.c.k]||{},t=0;STS.forEach(function(x){t+=s[x.k]||0});if(!t)return;any=true;
-    h+='<div class="svcres"><div class="lab"><span>'+r.c.n+'</span><small>'+t+'人</small></div><div class="stack">';
-    STS.forEach(function(x){var p=t?(s[x.k]||0)/t*100:0;if(p)h+='<span data-w="'+p.toFixed(1)+'" style="background:'+x.c+'" title="'+x.n+' '+Math.round(p)+'%"></span>';});
-    h+='</div></div>';});
-  if(!any)h+='<p class="s">まだデータがありません</p>';
-  h+='<div class="legend">'+STS.map(function(x){return'<div><i style="background:'+x.c+'"></i>'+x.n+'</div>'}).join('')+'</div></div>';
-  h+='<p class="thanks">ご協力ありがとうございました<br>このページは閉じて大丈夫です</p></div>';
-  stage.innerHTML=h;window.scrollTo(0,0);
-  requestAnimationFrame(function(){setTimeout(function(){
-    stage.querySelectorAll('[data-w]').forEach(function(e){e.style.width=e.getAttribute('data-w')+'%'});
-    stage.querySelectorAll('[data-count]').forEach(function(e){var to=+e.getAttribute('data-count'),t0=null;
-      function f(ts){if(!t0)t0=ts;var p=Math.min(1,(ts-t0)/1000);e.textContent=Math.round(to*(1-Math.pow(1-p,3)))+'%';if(p<1)requestAnimationFrame(f)}requestAnimationFrame(f)});
-  },120)});
-  confetti();
+  h+='<div class="row"><div class="lab"><span>どれも使っていなかった'+(mine.none?'<em>あなたも</em>':'')+'</span><span class="pc">'+np+'%</span></div><div class="track"><div class="fill alt" data-w="'+np+'"></div></div></div></div>';
+  // overall donut
+  var all={};STS.forEach(function(x){all[x.k]=0});
+  Object.keys(R.st).forEach(function(k){STS.forEach(function(x){all[x.k]+=R.st[k][x.k]||0})});
+  var tot=0;STS.forEach(function(x){tot+=all[x.k]});
+  var legend='<div class="legend">'+STS.map(function(x){return'<div><i style="background:'+x.c+'"></i>'+x.n+'</div>'}).join('')+'</div>';
+  if(tot){var keep=all.both+all.less;
+    h+='<div class="card"><h3>LILI入会後、どうなった？</h3><p class="s">使っていたサービスすべて（のべ'+tot+'件）の内訳</p><div class="pie">'+
+    donut(STS.map(function(x){return{v:all[x.k],c:x.c}}),136,pct(keep,tot)+'%','併用中')+'<div class="plg">'+
+    STS.map(function(x){return'<div><i style="background:'+x.c+'"></i><span>'+x.n+'</span><b>'+pct(all[x.k],tot)+'%</b></div>'}).join('')+'</div></div></div>';}
+  // per service donuts
+  var cells='';
+  rows.forEach(function(r){var s=R.st[r.c.k]||{},t=0;STS.forEach(function(x){t+=s[x.k]||0});if(!t)return;
+    var keep=(s.both||0)+(s.less||0);
+    cells+='<div class="cell">'+donut(STS.map(function(x){return{v:s[x.k]||0,c:x.c}}),104,t,'人')+'<b>'+r.c.n+'</b><small>併用中 '+pct(keep,t)+'%</small></div>';});
+  if(cells)h+='<div class="card"><h3>サービスごとの「その後」</h3><p class="s">そのサービスを使っていた人の内訳</p><div class="grid">'+cells+'</div>'+legend+'</div>';
+  return h;
 }
 function confetti(){
   var box=document.createElement('div');box.className='confetti';var cols=["#4FA8DC","#C8E9FD","#F6D98E","#E9A15B","#9FD3F2"];
