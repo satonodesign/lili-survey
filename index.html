@@ -308,10 +308,10 @@ function animate(){
     stage.querySelectorAll('[data-d]').forEach(function(e){var d=e.getAttribute('data-d');e.setAttribute('stroke-dasharray',d+' '+(100-d))});
   },80)});
 }
-function showResult(R){
+function showResult(R,closed){
   S.cur={name:'result'};S.R=R;progress();
-  var h='<div class="screen res"><div style="text-align:center"><span class="hero">'+ic('check')+'</span></div><h1>ご回答ありがとう<br>ございました！</h1><span class="rule"></span>'+
-  '<p class="lead" style="text-align:center;margin-bottom:12px">いま集まっている、みんなの結果です</p>'+
+  var h='<div class="screen res"><div style="text-align:center"><span class="hero">'+ic('check')+'</span></div><h1>'+(closed?'アンケートは<br>締め切りました':'ご回答ありがとう<br>ございました！')+'</h1><span class="rule"></span>'+
+  '<p class="lead" style="text-align:center;margin-bottom:12px">'+(closed?'たくさんのご回答ありがとうございました。<br>みんなの最終結果です':'いま集まっている、みんなの結果です')+'</p>'+
   '<div class="total"><div><b>'+R.households+'</b><span>ご家庭</span></div><div><b>'+R.n+'</b><span>お子さま</span></div></div>';
   // ages
   if(R.ages){var ac=["#C8E9FD","#9FD3F2","#4FA8DC","#3388BC","#F6D98E","#E9A15B"],ap=[],bi=0;
@@ -328,7 +328,7 @@ function showResult(R){
     var k=b.getAttribute('data-band'),D=k==="all"?S.R:S.R.bands[k];
     document.getElementById('bandbody').innerHTML=bandBody(D);animate();
   }});
-  animate();confetti();
+  animate();if(!closed)confetti();
 }
 function bandBody(R){
   var mine={};S.kids.forEach(function(k){k.used.forEach(function(u){mine[u]=1})});
@@ -361,7 +361,13 @@ function confetti(){
   for(var i=0;i<60;i++){var e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.background=cols[i%5];e.style.animationDuration=(1.6+Math.random()*1.6)+'s';e.style.animationDelay=(Math.random()*.5)+'s';e.style.transform='rotate('+Math.random()*360+'deg)';box.appendChild(e)}
   document.body.appendChild(box);setTimeout(function(){box.remove()},4000);
 }
-S.cur=null;go('intro',null,false);
+var CLOSED=true;
+if(CLOSED){
+  S.cur={name:'sending'};progress();
+  stage.innerHTML='<div class="screen" style="text-align:center"><div class="spin"></div><h2>読み込み中…</h2></div>';
+  var closedMsg=function(){stage.innerHTML='<div class="screen" style="text-align:center"><span class="hero">'+ic('check')+'</span><h1>アンケートは<br>締め切りました</h1><span class="rule" style="margin:10px auto 16px"></span><p class="lead">たくさんのご回答ありがとうございました。</p></div>';};
+  fetch(API_URL).then(function(r){return r.json()}).then(function(j){if(j&&j.ok&&j.stats&&j.stats.n)showResult(j.stats,true);else closedMsg()}).catch(closedMsg);
+}else{S.cur=null;go('intro',null,false);}
 </script>
 </body>
 </html>
